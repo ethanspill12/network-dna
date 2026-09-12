@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react'
 import { mockCapture } from '../../data/mockCapture'
+import { ConnectionDecodePanel } from './ConnectionDecodePanel'
 import { DnaScene } from './DnaScene'
 
 interface NetworkDnaViewProps {
   isHandoff?: boolean
   seamlessEntry?: boolean
   onBack: () => void
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  return `${(bytes / 1024).toFixed(1)} KB`
 }
 
 export function NetworkDnaView({ isHandoff = false, seamlessEntry = false, onBack }: NetworkDnaViewProps) {
@@ -63,29 +59,12 @@ export function NetworkDnaView({ isHandoff = false, seamlessEntry = false, onBac
           <span>SELECT A RUNG</span>
         </div>
 
-        <aside className={`connection-hud ${selected ? 'is-visible' : ''}`} aria-live="polite">
-          {selected ? (
-            <>
-              <div className="hud-heading">
-                <span>RELATIONSHIP / {selected.id.toUpperCase()}</span>
-                <button type="button" onClick={() => setSelectedId(null)} aria-label="Close connection details">×</button>
-              </div>
-              <dl>
-                <div><dt>SOURCE IP</dt><dd>{selected.source}</dd></div>
-                <div><dt>DESTINATION IP</dt><dd>{selected.destination}</dd></div>
-                <div><dt>PROTOCOL</dt><dd>{selected.protocol}</dd></div>
-                <div><dt>PACKETS</dt><dd>{selected.packets.toLocaleString()}</dd></div>
-                <div><dt>DATA</dt><dd>{formatBytes(selected.bytes)}</dd></div>
-                <div><dt>STATUS</dt><dd className="normal-status"><span />{selected.status.toUpperCase()}</dd></div>
-              </dl>
-            </>
-          ) : (
-            <div className="connection-placeholder">
-              <span>CONNECTION DATA</span>
-              <p>Hover to identify a relationship.<br />Select a rung to inspect it.</p>
-            </div>
-          )}
-        </aside>
+        <ConnectionDecodePanel
+          key={selected?.id ?? 'no-selection'}
+          connection={selected}
+          endpoints={mockCapture.endpoints}
+          onClose={() => setSelectedId(null)}
+        />
       </section>
     </main>
   )

@@ -14,8 +14,8 @@ export interface NetworkConnection {
   source: string
   destination: string
   protocol: 'DNS' | 'HTTPS' | 'TLS' | 'TCP' | 'UDP'
-  sourcePort: number
-  destinationPort: number
+  sourcePort?: number
+  destinationPort?: number
   packets: number
   bytes: number
   firstSeen: number

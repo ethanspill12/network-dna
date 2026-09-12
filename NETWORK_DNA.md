@@ -793,7 +793,7 @@ When a checkpoint is completed, update a concise project-status section so futur
 # 30. Project Status
 
 ## Current Phase
-**Checkpoint 3B Complete — Network Topology to DNA Transformation**
+**Checkpoint 4 Complete — Decode Mode / Wireshark Learning**
 
 ## Completed
 - Project concept
@@ -824,14 +824,19 @@ When a checkpoint is completed, update a concise project-status section so futur
 - All 11 identified topology relationships align into projected DNA rungs
 - Shared geometry mapping preserves connection identity across SVG and WebGL
 - DNA emergence and idle-rotation settling sequence implemented
+- Beginner-first connection explanations derived from protocol and endpoint data
+- Progressive Decode Connection technical detail panel
+- Data-driven Wireshark display-filter generation with plain-language guidance
+- Clipboard copy controls with fallback and visible result states
+- Selection changes and panel close reset decode and copy state
 
 ## In Progress
 - Awaiting explicit approval for the next checkpoint
 
 ## Next Checkpoint
-Define the next checkpoint before adding Decode Mode, network integrations, or additional product areas.
+Define the next checkpoint before adding real capture processing or additional product areas.
 
-Do **NOT** begin Decode Mode, Wireshark/TShark integration, Attack Lab, or real PCAP work until explicitly approved.
+Do **NOT** begin real PCAP upload, FastAPI/TShark integration, Attack Lab, or live capture until explicitly approved.
 
 ---
 
