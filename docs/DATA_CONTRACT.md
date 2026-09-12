@@ -6,7 +6,7 @@ This document defines the normalized data structures shared between packet proce
 
 Raw packets remain directional.
 
-Connections are bidirectional conversation-level relationships whenever both directions can reasonably be grouped together.
+Connections represent bidirectional conversations whenever both directions can reasonably be grouped together.
 
 ---
 
@@ -35,11 +35,11 @@ A `Packet` represents one normalized directional packet extracted from a PCAP or
 
 * `source`
 
-  * Source IP address.
+  * Source IPv4 address.
 
 * `destination`
 
-  * Destination IP address.
+  * Destination IPv4 address.
 
 * `transportProtocol`
 
@@ -47,34 +47,53 @@ A `Packet` represents one normalized directional packet extracted from a PCAP or
 
 * `applicationProtocol`
 
-  * Application-layer protocol when the capture establishes one, such as `DNS`, `TLS`, or `HTTP`.
+  * Application-layer protocol when established by the capture, such as `DNS`, `TLS`, or `HTTP`.
   * Use `null` when it cannot be determined reliably.
 
 * `sourcePort`
 
-  * TCP or UDP source port when available.
+  * TCP or UDP source port.
+  * Type: `integer | null`
 
 * `destinationPort`
 
-  * TCP or UDP destination port when available.
+  * TCP or UDP destination port.
+  * Type: `integer | null`
 
 * `length`
 
   * Total frame length in bytes.
 
+Packets remain directional because each packet has a sender and receiver.
+
 ---
 
 # Connection
 
-A `Connection` represents one bidirectional TCP or UDP communication relationship.
+A `Connection` represents one normalized bidirectional TCP or UDP conversation.
 
-Packets traveling from A to B and packets traveling from B back to A should be grouped into one Connection when they belong to the same conversation.
+Traffic from A to B and traffic from B to A should be grouped into one Connection when both directions belong to the same conversation.
 
-## Example
+Every Connection must include a `roleModel` value so consumers know which endpoint model is being used.
+
+Allowed values:
+
+```text
+client-server
+neutral
+```
+
+---
+
+# Client-Server Connection
+
+Use the `client-server` role model when client and server roles can be determined with reasonable confidence.
 
 ```json
 {
   "id": "connection-1",
+  "roleModel": "client-server",
+
   "clientIp": "192.168.1.14",
   "clientPort": 53124,
   "serverIp": "8.8.8.8",
@@ -95,16 +114,73 @@ Packets traveling from A to B and packets traveling from B back to A should be g
   "firstSeen": 1.532,
   "lastSeen": 48.13,
 
-  "riskScore": 4,
+  "riskScore": 0,
   "status": "normal"
 }
 ```
+
+Port fields have type:
+
+```text
+integer | null
+```
+
+This applies to:
+
+```text
+clientPort
+serverPort
+sourcePort
+destinationPort
+endpointAPort
+endpointBPort
+```
+
+Unavailable ports should be represented as `null`.
+
+---
+
+# Neutral Connection
+
+If client and server roles cannot be confidently determined, use the `neutral` role model.
+
+```json
+{
+  "id": "connection-2",
+  "roleModel": "neutral",
+
+  "endpointAIp": "192.168.1.18",
+  "endpointAPort": 42000,
+  "endpointBIp": "198.51.100.175",
+  "endpointBPort": 41000,
+
+  "transportProtocol": "TCP",
+  "applicationProtocol": null,
+  "displayProtocol": "TCP",
+
+  "packetsTotal": 18,
+  "packetsAToB": 10,
+  "packetsBToA": 8,
+
+  "bytesTotal": 4500,
+  "bytesAToB": 2800,
+  "bytesBToA": 1700,
+
+  "firstSeen": 18.750,
+  "lastSeen": 27.490,
+
+  "riskScore": 0,
+  "status": "normal"
+}
+```
+
+Neutral roles are preferred over inventing client/server identity.
 
 ---
 
 # Bidirectional Aggregation
 
-The same conversation should not become two separate connections just because packets travel in both directions.
+Network DNA should not create separate Connections solely because traffic changes direction.
 
 For example:
 
@@ -115,7 +191,7 @@ For example:
 
 should normally become one Connection.
 
-A conversation can be normalized using:
+A TCP or UDP conversation can conceptually be identified using:
 
 ```text
 endpoint 1 IP
@@ -125,14 +201,16 @@ endpoint 2 port
 transport protocol
 ```
 
-The endpoint ordering should be stable so the reverse direction maps to the same relationship.
+The endpoint ordering must be normalized so reverse traffic maps to the same relationship.
 
 Conceptually:
 
 ```text
 Directional packets
         ↓
-Normalize endpoint pair
+Identify endpoints and ports
+        ↓
+Normalize endpoint ordering
         ↓
 Group both directions
         ↓
@@ -141,22 +219,27 @@ One Connection
 
 ---
 
-# Client and Server Roles
+# Stable Endpoint A/B Ordering
 
-When client/server roles can be determined reasonably, use:
+Neutral endpoint A/B ordering must be deterministic.
 
-```text
-clientIp
-clientPort
-serverIp
-serverPort
-```
+Once endpoint A and endpoint B have been selected for a Connection, their identities must remain fixed for the lifetime of that Connection.
 
-Useful evidence may include:
+A packet traveling in the reverse direction must not cause endpoint A and endpoint B to switch.
 
-* a known service port
-* an ephemeral client port
-* TCP connection establishment
+The exact deterministic ordering algorithm will be implemented during R5.
+
+---
+
+# Client and Server Determination
+
+Client/server roles should only be assigned when the capture provides reasonable evidence.
+
+Possible evidence includes:
+
+* known service ports
+* ephemeral client ports
+* TCP connection-establishment behavior
 * DNS request/response behavior
 * protocol information from TShark
 
@@ -175,37 +258,43 @@ server = 8.8.8.8:53
 
 because port 53 is a well-known DNS service port.
 
-Client/server roles should not be invented when the traffic does not provide enough evidence.
+Port numbers alone should not always be treated as proof.
+
+If roles are uncertain, use the neutral endpoint model instead.
 
 ---
 
-# Neutral Endpoint Roles
+# Fixed Client and Server Roles
 
-If client/server identity is ambiguous, preserve neutral endpoint roles instead.
+Once client/server roles are inferred for a Connection, those roles remain fixed regardless of packet direction.
 
-Example fields:
-
-```text
-endpointAIp
-endpointAPort
-endpointBIp
-endpointBPort
-```
-
-Directional statistics can then use:
+For example:
 
 ```text
-packetsAToB
-packetsBToA
-bytesAToB
-bytesBToA
+client = 192.168.1.14:52100
+server = 203.0.113.20:443
 ```
 
-This is preferred over making an unsupported client/server assumption.
+A later packet may travel:
+
+```text
+203.0.113.20:443 → 192.168.1.14:52100
+```
+
+but the roles remain:
+
+```text
+client = 192.168.1.14:52100
+server = 203.0.113.20:443
+```
+
+The server port remains associated with the server endpoint even when examining server-to-client packets.
 
 ---
 
 # Protocol Fields
+
+Network DNA separates transport protocol, application protocol, and the protocol label displayed by the frontend.
 
 ## transportProtocol
 
@@ -234,47 +323,58 @@ TLS
 HTTP
 ```
 
-Do not infer an application protocol only because a common port is being used.
-
-For example, port `443` alone does not prove the traffic is TLS or HTTPS.
-
-If the protocol cannot be established:
+If the application protocol is unknown:
 
 ```json
 "applicationProtocol": null
 ```
 
+Network DNA must not assign an application protocol only because a common port is being used.
+
+For example, port `443` alone does not prove the traffic is TLS or HTTPS.
+
 ---
 
 ## displayProtocol
 
-A frontend-friendly label.
+`displayProtocol` is a frontend-friendly protocol label.
+
+The fallback behavior is:
+
+```text
+applicationProtocol known
+        ↓
+use applicationProtocol
+
+otherwise
+
+transportProtocol known
+        ↓
+use transportProtocol
+
+otherwise
+        ↓
+UNKNOWN
+```
 
 Examples:
 
 ```text
 DNS
-HTTPS/TLS
+TLS
+HTTP
 TCP
 UDP
 UNKNOWN
 ```
 
-It should be based on known information and should not overstate what the capture proves.
-
-Example:
-
-```text
-transportProtocol = TCP
-applicationProtocol = null
-displayProtocol = TCP
-```
+`displayProtocol` must not introduce an application protocol that is not supported by the capture.
 
 ---
 
 # Directional Statistics
 
-When client/server roles are known:
+When `roleModel` is `client-server`, use:
 
 ```text
 packetsTotal
@@ -302,13 +402,23 @@ bytesClientToServer +
 bytesServerToClient
 ```
 
-When roles are unknown, use equivalent A-to-B and B-to-A fields.
+When `roleModel` is `neutral`, use:
+
+```text
+packetsTotal
+packetsAToB
+packetsBToA
+
+bytesTotal
+bytesAToB
+bytesBToA
+```
 
 ---
 
 # Timing
 
-Each Connection includes:
+Each Connection contains:
 
 ```text
 firstSeen
@@ -322,6 +432,49 @@ lastSeen
 * `lastSeen`
 
   * Timestamp of the latest packet in the conversation.
+
+---
+
+# Risk Score and Status
+
+## riskScore
+
+`riskScore` is an integer from:
+
+```text
+0–100
+```
+
+A higher score indicates behavior that deserves more investigation.
+
+It does not prove malicious activity.
+
+Before anomaly detection is implemented in R5, parser-generated Connections should default to:
+
+```json
+"riskScore": 0
+```
+
+---
+
+## status
+
+Allowed values are:
+
+```text
+normal
+low-concern
+suspicious
+high-risk
+```
+
+Before anomaly detection exists, parser-generated Connections should default to:
+
+```json
+"status": "normal"
+```
+
+Mock Attack Lab or simulated suspicious data may intentionally use a non-normal status for frontend testing.
 
 ---
 
@@ -345,56 +498,172 @@ These provide:
 
 * packet timing
 * packet direction
-* IP addresses
+* IPv4 addresses
+* transport protocol information
 * TCP/UDP ports
-* transport information
 * packet size
+
+---
 
 ## Derived by Network DNA
 
-The following are calculated during processing:
+The following values are calculated during processing:
 
 ```text
 connection id
+roleModel
 bidirectional conversation grouping
 client/server roles when inferable
-neutral endpoint roles when not inferable
+neutral endpoint ordering when roles are unclear
 packet totals
 byte totals
 firstSeen
 lastSeen
 displayProtocol
+riskScore
+status
 ```
 
-## Application protocol
+---
+
+# Application Protocol Detection
 
 Application protocol is separate from transport protocol.
 
-TShark can identify higher-level protocols through packet dissection, but Network DNA should only populate `applicationProtocol` when the capture provides enough evidence.
+TShark can identify many higher-level protocols through packet dissection, but Network DNA should populate `applicationProtocol` only when the capture provides sufficient evidence.
 
-If it does not:
+If not:
 
 ```json
 "applicationProtocol": null
+```
+
+Port numbers may provide supporting context, but they should not automatically determine the application protocol.
+
+---
+
+# Capture-Level Envelope
+
+The final parser output should include capture-level information around the Connection list.
+
+Example:
+
+```json
+{
+  "filename": "test.pcapng",
+  "duration": 48.13,
+  "connections": []
+}
+```
+
+Fields:
+
+* `filename`
+
+  * Name of the source capture file.
+
+* `duration`
+
+  * Duration of the capture in seconds.
+
+* `connections`
+
+  * Array of normalized Connection objects.
+
+Conceptually:
+
+```text
+Capture
+├── filename
+├── duration
+└── connections[]
+```
+
+---
+
+# R5 Scope
+
+For the hackathon implementation, R5 will initially support IPv4 traffic.
+
+Current address fields:
+
+```text
+ip.src
+ip.dst
+```
+
+IPv6 support is considered future work and should not block the initial parser.
+
+---
+
+# Packet to Connection Flow
+
+```text
+PCAP / PCAPNG
+      ↓
+TShark
+      ↓
+Directional Packet records
+      ↓
+Normalize endpoint pair
+      ↓
+Group both directions
+      ↓
+Determine client/server when reasonably possible
+      ↓
+Otherwise use stable endpoint A/B roles
+      ↓
+Calculate packet, byte, and timing statistics
+      ↓
+Connection
+      ↓
+Capture envelope
+      ↓
+Network DNA frontend
 ```
 
 ---
 
 # Summary
 
-Network DNA uses two levels of data:
+Network DNA uses two primary levels of network data.
+
+## Packet
+
+A Packet remains directional and preserves:
 
 ```text
-Packet
-↓
-directional raw packet
-
-Connection
-↓
-normalized bidirectional relationship
+source
+destination
+sourcePort
+destinationPort
+timestamp
+transportProtocol
+applicationProtocol when known
+length
 ```
 
-The main aggregation rule is:
+## Connection
+
+A Connection represents one normalized bidirectional relationship.
+
+Every Connection includes a `roleModel` that identifies whether it uses:
+
+```text
+client-server
+```
+
+or:
+
+```text
+neutral
+```
+
+Client/server or endpoint A/B roles remain stable throughout the conversation.
+
+Unknown application protocols remain `null`, and the frontend protocol label falls back to the known transport protocol rather than guessing.
+
+The core aggregation rule is:
 
 ```text
 A → B
@@ -403,7 +672,3 @@ B → A
 =
 one conversation whenever reasonably possible
 ```
-
-Packets preserve exact direction.
-
-Connections summarize both directions into one stable relationship for the frontend.
