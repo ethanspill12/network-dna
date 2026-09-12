@@ -793,7 +793,7 @@ When a checkpoint is completed, update a concise project-status section so futur
 # 30. Project Status
 
 ## Current Phase
-**Checkpoint 1 Complete — Frontend Foundation**
+**Checkpoint 2 Complete — Network Observation with Mock Data**
 
 ## Completed
 - Project concept
@@ -808,14 +808,19 @@ When a checkpoint is completed, update a concise project-status section so futur
 - React + TypeScript + Vite application initialized
 - Responsive cyberpunk landing screen implemented
 - Production build and local development server verified
+- Landing-to-observation transition implemented
+- Structured mock capture data with 8 endpoints and 11 aggregated connections
+- Responsive network topology with varied packet-pulse animation
+- Data-derived capture HUD and endpoint traffic isolation
+- Future Generate Network DNA control staged without DNA functionality
 
 ## In Progress
-- Awaiting approval to begin Checkpoint 2
+- Awaiting explicit approval to begin Checkpoint 3
 
 ## Next Checkpoint
-Define Checkpoint 2 scope before adding visualization or capture functionality.
+Checkpoint 3: generate and explore Network DNA only after explicit approval.
 
-Do **NOT** begin 3D DNA implementation until the basic frontend environment is verified working.
+Do **NOT** begin DNA or Three.js implementation until Checkpoint 3 is explicitly approved.
 
 ---
 
