@@ -793,7 +793,7 @@ When a checkpoint is completed, update a concise project-status section so futur
 # 30. Project Status
 
 ## Current Phase
-**Checkpoint 2 Complete — Network Observation with Mock Data**
+**Checkpoint 3A Complete — 3D Network DNA Prototype**
 
 ## Completed
 - Project concept
@@ -813,14 +813,20 @@ When a checkpoint is completed, update a concise project-status section so futur
 - Responsive network topology with varied packet-pulse animation
 - Data-derived capture HUD and endpoint traffic isolation
 - Future Generate Network DNA control staged without DNA functionality
+- Dedicated interactive 3D Network DNA scene implemented
+- Stable one-rung-per-connection mapping from mock capture data
+- Two continuous cybernetic helix rails with activity-driven packet pulses
+- Drag, touch, zoom, idle rotation, rung hover, and rung selection controls
+- Lightweight selected-connection HUD and in-app return to observation
+- Browser-level WebGL and interaction flow verified
 
 ## In Progress
-- Awaiting explicit approval to begin Checkpoint 3
+- Awaiting explicit approval to begin Checkpoint 3B
 
 ## Next Checkpoint
-Checkpoint 3: generate and explore Network DNA only after explicit approval.
+Checkpoint 3B: topology-to-DNA transformation work only after explicit approval.
 
-Do **NOT** begin DNA or Three.js implementation until Checkpoint 3 is explicitly approved.
+Do **NOT** begin topology-to-DNA morph or transformation work until Checkpoint 3B is explicitly approved.
 
 ---
 

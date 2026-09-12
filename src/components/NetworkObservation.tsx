@@ -33,7 +33,12 @@ function formatDuration(seconds: number) {
   return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-export function NetworkObservation() {
+interface NetworkObservationProps {
+  isExiting?: boolean
+  onGenerate: () => void
+}
+
+export function NetworkObservation({ isExiting = false, onGenerate }: NetworkObservationProps) {
   const [selectedEndpoint, setSelectedEndpoint] = useState<string | null>(null)
   const endpointsByIp = useMemo(
     () => new Map(mockCapture.endpoints.map((endpoint) => [endpoint.ip, endpoint])),
@@ -47,7 +52,7 @@ export function NetworkObservation() {
     !selected || connection.source === selected.ip || connection.destination === selected.ip
 
   return (
-    <main className="observation">
+    <main className={`observation ${isExiting ? 'observation--exiting' : ''}`}>
       <header className="site-header observation-header">
         <a className="brand" href="/" aria-label="Return to Network DNA home">
           <span className="brand-mark" aria-hidden="true" />
@@ -181,7 +186,7 @@ export function NetworkObservation() {
           </div>
         </div>
 
-        <button className="generate-button" type="button" aria-disabled="true">
+        <button className="generate-button" type="button" onClick={onGenerate}>
           <span>GENERATE NETWORK DNA</span>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 4c8 0 6 16 14 16M19 4C11 4 13 20 5 20M8 8h8M8 16h8" />

@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { NetworkObservation } from './components/NetworkObservation'
 
+const NetworkDnaView = lazy(() =>
+  import('./components/dna/NetworkDnaView').then((module) => ({ default: module.NetworkDnaView })),
+)
+
 function App() {
-  const [view, setView] = useState<'landing' | 'transitioning' | 'observation'>('landing')
+  const [view, setView] = useState<'landing' | 'transitioning' | 'observation' | 'dna-transitioning' | 'dna'>('landing')
 
   const loadCapture = () => {
     if (view !== 'landing') return
@@ -10,8 +14,22 @@ function App() {
     window.setTimeout(() => setView('observation'), 620)
   }
 
-  if (view === 'observation') {
-    return <NetworkObservation />
+  const generateDna = () => {
+    if (view !== 'observation') return
+    setView('dna-transitioning')
+    window.setTimeout(() => setView('dna'), 520)
+  }
+
+  if (view === 'observation' || view === 'dna-transitioning') {
+    return <NetworkObservation onGenerate={generateDna} isExiting={view === 'dna-transitioning'} />
+  }
+
+  if (view === 'dna') {
+    return (
+      <Suspense fallback={<main className="dna-view" aria-label="Loading Network DNA" />}>
+        <NetworkDnaView onBack={() => setView('observation')} />
+      </Suspense>
+    )
   }
 
   return (
