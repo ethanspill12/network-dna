@@ -31,6 +31,6 @@ It does not perform:
 
 * anomaly detection
 * live capture
-* FastAPI integration
-* frontend integration
 * Attack Lab processing
+
+FastAPI reuses these functions from `backend/main.py`; extraction and aggregation logic remains centralized in this script.

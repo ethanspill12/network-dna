@@ -236,6 +236,118 @@ h1 {
   outline-offset: 5px;
 }
 
+.capture-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.load-button:disabled {
+  cursor: wait;
+  opacity: 0.38;
+  transform: none;
+}
+
+.capture-error {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: min(440px, calc(100vw - 40px));
+  margin: 22px auto 0;
+  padding: 11px 14px;
+  border: 1px solid rgba(244, 181, 102, 0.35);
+  color: rgba(238, 229, 210, 0.76);
+  background: rgba(72, 47, 23, 0.16);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.capture-error span {
+  color: #f2c98f;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.53rem;
+  letter-spacing: 0.18em;
+}
+
+.capture-processing {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 25px;
+  animation: observation-enter 500ms ease both;
+}
+
+.capture-processing > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 245px;
+  text-align: left;
+}
+
+.capture-processing small {
+  color: rgba(106, 210, 224, 0.46);
+  font-size: 0.47rem;
+  letter-spacing: 0.18em;
+}
+
+.capture-processing strong {
+  color: rgba(222, 250, 253, 0.86);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+
+.processing-orbit {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(91, 218, 234, 0.18);
+  border-radius: 50%;
+  animation: processing-spin 2.1s linear infinite;
+}
+
+.processing-orbit::before,
+.processing-orbit i {
+  position: absolute;
+  border-radius: 50%;
+  content: '';
+}
+
+.processing-orbit::before {
+  inset: 7px;
+  border: 1px solid rgba(181, 248, 255, 0.34);
+}
+
+.processing-orbit i {
+  top: -2px;
+  left: 14px;
+  width: 4px;
+  height: 4px;
+  background: #c5fbff;
+  box-shadow: 0 0 10px #50d8e8;
+}
+
+.processing-line {
+  height: 1px;
+  overflow: hidden;
+  background: rgba(77, 197, 212, 0.12);
+}
+
+.processing-line i {
+  display: block;
+  width: 42%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #71dfec, transparent);
+  animation: processing-scan 1.35s ease-in-out infinite;
+}
+
 .ambient {
   position: absolute;
   z-index: -1;
@@ -644,6 +756,18 @@ h1 {
   font-size: 0.54rem;
   font-weight: 400;
   letter-spacing: 0.12em;
+}
+
+.topology-limit-note {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  right: 18px;
+  color: rgba(142, 224, 234, 0.45);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.46rem;
+  letter-spacing: 0.12em;
+  pointer-events: none;
 }
 
 .generate-button {
@@ -1436,6 +1560,15 @@ h1 {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes processing-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes processing-scan {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(340%); }
+}
+
 @media (max-width: 600px) {
   .site-header,
   .site-footer {
@@ -1462,6 +1595,17 @@ h1 {
 
   .load-button {
     margin-top: 36px;
+  }
+
+  .capture-processing > div {
+    width: 205px;
+  }
+
+  .topology-limit-note {
+    top: 52px;
+    right: 12px;
+    left: 12px;
+    text-align: center;
   }
 
   .capture-name {

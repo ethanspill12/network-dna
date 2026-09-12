@@ -1,6 +1,5 @@
-import type { NetworkCapture } from '../types/network'
-
-export const mockCapture: NetworkCapture = {
+// Retained as a development fixture; real capture upload is the primary application path.
+export const mockCapture = {
   id: 'capture-001',
   name: 'development-session.pcapng',
   duration: 167,

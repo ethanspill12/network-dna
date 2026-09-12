@@ -1,4 +1,4 @@
-import { mockCapture } from '../../data/mockCapture'
+import type { NetworkCapture } from '../../types/network'
 import { getDnaRungLayout, getHelixCoordinate } from '../../visualization/dnaGeometry'
 
 const WIDTH = 1000
@@ -20,8 +20,8 @@ function railPath(side: 0 | 1) {
   }).join(' ')
 }
 
-export function TopologyToDnaTransition() {
-  const endpointsByIp = new Map(mockCapture.endpoints.map((endpoint) => [endpoint.ip, endpoint]))
+export function TopologyToDnaTransition({ capture }: { capture: NetworkCapture }) {
+  const endpointsByIp = new Map(capture.endpoints.map((endpoint) => [endpoint.ip, endpoint]))
 
   return (
     <div className="dna-transform" aria-label="Reorganizing network relationships into Network DNA">
@@ -38,10 +38,10 @@ export function TopologyToDnaTransition() {
         </g>
 
         <g className="transform-relationships">
-          {mockCapture.connections.map((connection, index) => {
+          {capture.connections.map((connection, index) => {
             const source = endpointsByIp.get(connection.source)!
             const destination = endpointsByIp.get(connection.destination)!
-            const layout = getDnaRungLayout(index, mockCapture.connections.length)
+            const layout = getDnaRungLayout(index, capture.connections.length)
             const dnaStart = projectDna(layout.start)
             const dnaEnd = projectDna(layout.end)
             const delay = 0.24 + index * 0.026
@@ -75,7 +75,7 @@ export function TopologyToDnaTransition() {
 
       <div className="dna-transform-status">
         <span>REORGANIZING RELATIONSHIPS</span>
-        <strong>{mockCapture.connections.length} / {mockCapture.connections.length}</strong>
+        <strong>{capture.connections.length} / {capture.connections.length}</strong>
         <i><b /></i>
       </div>
     </div>

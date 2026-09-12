@@ -793,7 +793,7 @@ When a checkpoint is completed, update a concise project-status section so futur
 # 30. Project Status
 
 ## Current Phase
-**Checkpoint 4 Complete — Decode Mode / Wireshark Learning**
+**Checkpoint 5 Complete — Real PCAP/PCAPNG Integration**
 
 ## Completed
 - Project concept
@@ -829,14 +829,25 @@ When a checkpoint is completed, update a concise project-status section so futur
 - Data-driven Wireshark display-filter generation with plain-language guidance
 - Clipboard copy controls with fallback and visible result states
 - Selection changes and panel close reset decode and copy state
+- Minimal local FastAPI capture-analysis service implemented
+- Real `.pcap` and `.pcapng` upload flow replaces the mock landing action
+- Existing reviewed TShark parser is reused directly without duplicated parsing logic
+- Approved role-aware connection contract is normalized through a dedicated frontend adapter
+- Real capture statistics, endpoints, relationships, DNA rungs, and Decode data flow end-to-end
+- Client/server Decode filters use the stable service endpoint and port
+- Neutral relationships retain Endpoint A/B wording and direction-neutral filters
+- Temporary uploads are size-limited and removed after success or error responses
+- Indeterminate staged capture-processing experience and readable error states implemented
+- Deterministic 48-relationship activity limit applied with full capture totals retained in the HUD
+- Real generated PCAPNG API flow, production build, and local frontend/backend runtimes verified
 
 ## In Progress
 - Awaiting explicit approval for the next checkpoint
 
 ## Next Checkpoint
-Define the next checkpoint before adding real capture processing or additional product areas.
+Define the next checkpoint before adding additional product areas.
 
-Do **NOT** begin real PCAP upload, FastAPI/TShark integration, Attack Lab, or live capture until explicitly approved.
+Do **NOT** begin Attack Lab, anomaly/mutation work, timeline, or live capture until explicitly approved.
 
 ---
 

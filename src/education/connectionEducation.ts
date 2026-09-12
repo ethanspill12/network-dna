@@ -7,7 +7,7 @@ export interface ConnectionExplanation {
 }
 
 export interface WiresharkFilter {
-  id: 'endpoint' | 'protocol' | 'destination'
+  id: string
   expression: string
   explanation: string
 }
@@ -17,18 +17,13 @@ export function findEndpoint(ip: string, endpoints: NetworkEndpoint[]) {
 }
 
 export function getKnownEndpointName(endpoint?: NetworkEndpoint) {
-  if (!endpoint || endpoint.name === 'UNKNOWN ENDPOINT') return undefined
+  if (!endpoint || ['UNKNOWN ENDPOINT', 'EXTERNAL ENDPOINT', 'SERVICE ENDPOINT'].includes(endpoint.name)) return undefined
   return endpoint.name
-}
-
-function readableName(name: string) {
-  return name.toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 function endpointPhrase(endpoint: NetworkEndpoint | undefined, fallback: string) {
   const knownName = getKnownEndpointName(endpoint)
-  if (knownName) return readableName(knownName)
-  if (endpoint?.role === 'external') return 'an unidentified external endpoint'
+  if (knownName) return knownName.toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
   return fallback
 }
 
@@ -38,82 +33,96 @@ export function explainConnection(
 ): ConnectionExplanation {
   const source = findEndpoint(connection.source, endpoints)
   const destination = findEndpoint(connection.destination, endpoints)
-  const actor = source?.role === 'local'
-    ? 'Your device'
-    : endpointPhrase(source, 'The source endpoint')
-  const target = endpointPhrase(destination, 'the destination endpoint')
-  const hasUnknownEndpoint = !getKnownEndpointName(source) || !getKnownEndpointName(destination)
-  const context = hasUnknownEndpoint
-    ? 'An unidentified endpoint is simply unattributed in this capture; that does not make it malicious.'
-    : undefined
+  const actor = connection.roleModel === 'client-server'
+    ? endpointPhrase(source, 'A client endpoint')
+    : endpointPhrase(source, 'Endpoint A')
+  const target = connection.roleModel === 'client-server'
+    ? endpointPhrase(destination, 'a service endpoint')
+    : endpointPhrase(destination, 'Endpoint B')
+  const context = 'An unattributed endpoint is not inherently suspicious; this capture simply does not provide a verified identity.'
 
-  switch (connection.protocol) {
+  switch (connection.applicationProtocol) {
     case 'DNS':
       return {
         title: 'DNS LOOKUP',
         summary: `${actor} exchanged DNS traffic with ${target}. DNS translates domain names into IP addresses so devices know where to connect.`,
-        context,
       }
-    case 'HTTPS':
+    case 'HTTP':
       return {
-        title: 'ENCRYPTED WEB CONNECTION',
-        summary: `${actor} exchanged encrypted web traffic with ${target}. HTTPS protects data while it travels across the network, but encryption alone does not establish whether the activity is trustworthy.`,
+        title: 'WEB CONNECTION',
+        summary: `${actor} exchanged web traffic with ${target}. HTTP carries requests and responses between network endpoints.`,
         context,
       }
     case 'TLS':
       return {
         title: 'ENCRYPTED TLS SESSION',
-        summary: `${actor} established an encrypted TLS session with ${target}. TLS protects data in transit while leaving basic connection metadata visible to network analysis.`,
-        context,
-      }
-    case 'TCP':
-      return {
-        title: 'TCP CONNECTION',
-        summary: `${actor} used TCP to communicate with ${target}. TCP provides reliable, ordered delivery; using TCP is normal and does not indicate risk by itself.`,
-        context,
-      }
-    case 'UDP':
-      return {
-        title: 'UDP EXCHANGE',
-        summary: `${actor} used UDP to communicate with ${target}. UDP sends data without establishing a persistent session and is common for timing, discovery, and other low-latency traffic.`,
+        summary: `${actor} exchanged encrypted TLS traffic with ${target}. TLS protects data in transit, but encryption alone does not establish whether activity is trustworthy.`,
         context,
       }
   }
-}
 
-function protocolDetails(protocol: NetworkConnection['protocol']) {
-  switch (protocol) {
-    case 'DNS': return { qualifier: 'dns' }
-    case 'HTTPS':
-    case 'TLS': return { qualifier: 'tls', transport: 'tcp' as const }
-    case 'TCP': return { qualifier: 'tcp', transport: 'tcp' as const }
-    case 'UDP': return { qualifier: 'udp', transport: 'udp' as const }
+  if (connection.transportProtocol === 'TCP') {
+    return {
+      title: 'TCP CONNECTION',
+      summary: `${actor} used TCP to communicate with ${target}. TCP provides reliable, ordered delivery and does not indicate risk by itself.`,
+      context,
+    }
+  }
+  return {
+    title: 'UDP EXCHANGE',
+    summary: `${actor} used UDP to communicate with ${target}. UDP is commonly used for discovery, timing, and other low-latency traffic.`,
+    context,
   }
 }
 
 export function generateWiresharkFilters(connection: NetworkConnection): WiresharkFilter[] {
-  const destination = connection.destination
-  const details = protocolDetails(connection.protocol)
-  const filters: WiresharkFilter[] = [
-    {
-      id: 'endpoint',
-      expression: `ip.addr == ${destination}`,
-      explanation: `Shows packets where ${destination} appears as either the source or destination.`,
-    },
-    {
-      id: 'protocol',
-      expression: `ip.addr == ${destination} && ${details.qualifier}`,
-      explanation: `Narrows those packets to traffic Wireshark identifies as ${details.qualifier.toUpperCase()}.`,
-    },
-  ]
+  const transport = connection.transportProtocol.toLowerCase()
+  const filters: WiresharkFilter[] = []
+  const contract = connection.contract
 
-  if (details.transport && connection.destinationPort !== undefined) {
+  if (contract.roleModel === 'client-server') {
+    const server = contract.serverIp
+    const port = contract.serverPort
     filters.push({
-      id: 'destination',
-      expression: `ip.dst == ${destination} && ${details.transport}.dstport == ${connection.destinationPort}`,
-      explanation: `Shows ${details.transport.toUpperCase()} packets sent to ${destination} on destination port ${connection.destinationPort}.`,
+      id: 'server',
+      expression: `ip.addr == ${server}`,
+      explanation: `Shows packets where the service endpoint ${server} is either the source or destination.`,
     })
+    filters.push({
+      id: 'transport',
+      expression: `ip.addr == ${server} && ${transport}`,
+      explanation: `Narrows that relationship to ${connection.transportProtocol} traffic.`,
+    })
+    if (port !== null) {
+      filters.push({
+        id: 'service',
+        expression: `ip.addr == ${server} && ${transport}.port == ${port}`,
+        explanation: `Shows ${connection.transportProtocol} traffic involving the stable service port ${port}, in either packet direction.`,
+      })
+    }
+    return filters
   }
 
+  const endpointA = contract.endpointAIp
+  const endpointB = contract.endpointBIp
+  filters.push({
+    id: 'endpoint-b',
+    expression: `ip.addr == ${endpointB}`,
+    explanation: `Shows packets where Endpoint B (${endpointB}) is either the source or destination.`,
+  })
+  filters.push({
+    id: 'pair',
+    expression: `ip.addr == ${endpointA} && ip.addr == ${endpointB} && ${transport}`,
+    explanation: `Shows ${connection.transportProtocol} traffic exchanged between Endpoint A and Endpoint B without assigning client/server roles.`,
+  })
+  const portA = contract.endpointAPort
+  const portB = contract.endpointBPort
+  if (portA !== null && portB !== null) {
+    filters.push({
+      id: 'ports',
+      expression: `ip.addr == ${endpointA} && ip.addr == ${endpointB} && ${transport}.port == ${portA} && ${transport}.port == ${portB}`,
+      explanation: `Narrows the endpoint pair to the two observed ${connection.transportProtocol} ports, regardless of direction.`,
+    })
+  }
   return filters
 }

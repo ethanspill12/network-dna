@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
-import { mockCapture } from '../../data/mockCapture'
+import type { NetworkCapture } from '../../types/network'
 import { ConnectionDecodePanel } from './ConnectionDecodePanel'
 import { DnaScene } from './DnaScene'
 
 interface NetworkDnaViewProps {
+  capture: NetworkCapture
   isHandoff?: boolean
   seamlessEntry?: boolean
   onBack: () => void
 }
 
-export function NetworkDnaView({ isHandoff = false, seamlessEntry = false, onBack }: NetworkDnaViewProps) {
+export function NetworkDnaView({ capture, isHandoff = false, seamlessEntry = false, onBack }: NetworkDnaViewProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const selected = mockCapture.connections.find((connection) => connection.id === selectedId)
+  const selected = capture.connections.find((connection) => connection.id === selectedId)
 
   useEffect(() => {
     document.body.style.cursor = hoveredId ? 'pointer' : ''
@@ -28,7 +29,7 @@ export function NetworkDnaView({ isHandoff = false, seamlessEntry = false, onBac
         </button>
         <div className="capture-name">
           <span className="status-dot" aria-hidden="true" />
-          DNA GENERATED / {mockCapture.connections.length} RELATIONSHIPS
+          DNA GENERATED / {capture.connections.length} RELATIONSHIPS
         </div>
       </header>
 
@@ -41,6 +42,7 @@ export function NetworkDnaView({ isHandoff = false, seamlessEntry = false, onBac
 
         <div className="dna-viewport">
           <DnaScene
+            connections={capture.connections}
             isHandoff={isHandoff}
             hoveredId={hoveredId}
             selectedId={selectedId}
@@ -62,7 +64,7 @@ export function NetworkDnaView({ isHandoff = false, seamlessEntry = false, onBac
         <ConnectionDecodePanel
           key={selected?.id ?? 'no-selection'}
           connection={selected}
-          endpoints={mockCapture.endpoints}
+          endpoints={capture.endpoints}
           onClose={() => setSelectedId(null)}
         />
       </section>

@@ -10,7 +10,6 @@ import {
   Vector3,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { mockCapture } from '../../data/mockCapture'
 import type { NetworkConnection } from '../../types/network'
 import { getDnaRungLayout, getHelixCoordinate } from '../../visualization/dnaGeometry'
 
@@ -178,13 +177,14 @@ function ConnectionRung({
 
 interface HelixProps {
   isHandoff: boolean
+  connections: NetworkConnection[]
   hoveredId: string | null
   selectedId: string | null
   onHover: (connectionId: string | null) => void
   onSelect: (connectionId: string) => void
 }
 
-function DataHelix({ isHandoff, hoveredId, selectedId, onHover, onSelect }: HelixProps) {
+function DataHelix({ isHandoff, connections, hoveredId, selectedId, onHover, onSelect }: HelixProps) {
   const helix = useRef<Group>(null)
   const railCurves = useMemo(() => {
     const segments = 90
@@ -221,13 +221,13 @@ function DataHelix({ isHandoff, hoveredId, selectedId, onHover, onSelect }: Heli
         </mesh>
       ))}
 
-      {mockCapture.connections.map((connection, index) => (
+      {connections.map((connection, index) => (
         <ConnectionRung
           key={connection.id}
           isHandoff={isHandoff}
           connection={connection}
           index={index}
-          count={mockCapture.connections.length}
+          count={connections.length}
           hovered={hoveredId === connection.id}
           selected={selectedId === connection.id}
           onHover={onHover}
@@ -240,6 +240,7 @@ function DataHelix({ isHandoff, hoveredId, selectedId, onHover, onSelect }: Heli
 
 interface DnaSceneProps {
   isHandoff?: boolean
+  connections: NetworkConnection[]
   hoveredId: string | null
   selectedId: string | null
   onHover: (connectionId: string | null) => void
@@ -265,6 +266,7 @@ export function DnaScene(props: DnaSceneProps) {
       <pointLight position={[-4, -2, 3]} intensity={18} distance={10} color="#20bfd3" />
       <DataHelix
         isHandoff={isHandoff}
+        connections={props.connections}
         hoveredId={props.hoveredId}
         selectedId={props.selectedId}
         onHover={props.onHover}

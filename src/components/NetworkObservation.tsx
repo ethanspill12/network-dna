@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { mockCapture } from '../data/mockCapture'
-import type { NetworkConnection, NetworkEndpoint } from '../types/network'
+import type { NetworkCapture, NetworkConnection, NetworkEndpoint } from '../types/network'
 import { TopologyToDnaTransition } from './transitions/TopologyToDnaTransition'
 
 const VIEW_WIDTH = 1000
@@ -31,24 +30,23 @@ function connectionPath(
 
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60)
-  return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
+  return `${minutes}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
 }
 
 interface NetworkObservationProps {
+  capture: NetworkCapture
   isTransforming?: boolean
   onGenerate: () => void
 }
 
-export function NetworkObservation({ isTransforming = false, onGenerate }: NetworkObservationProps) {
+export function NetworkObservation({ capture, isTransforming = false, onGenerate }: NetworkObservationProps) {
   const [selectedEndpoint, setSelectedEndpoint] = useState<string | null>(null)
   const topologyRef = useRef<SVGSVGElement>(null)
   const endpointsByIp = useMemo(
-    () => new Map(mockCapture.endpoints.map((endpoint) => [endpoint.ip, endpoint])),
-    [],
+    () => new Map(capture.endpoints.map((endpoint) => [endpoint.ip, endpoint])),
+    [capture],
   )
-  const packetTotal = mockCapture.connections.reduce((total, connection) => total + connection.packets, 0)
-  const anomalyTotal = mockCapture.connections.filter((connection) => connection.status === 'investigate').length
-  const selected = mockCapture.endpoints.find((endpoint) => endpoint.id === selectedEndpoint)
+  const selected = capture.endpoints.find((endpoint) => endpoint.id === selectedEndpoint)
 
   const isRelated = (connection: NetworkConnection) =>
     !selected || connection.source === selected.ip || connection.destination === selected.ip
@@ -66,7 +64,7 @@ export function NetworkObservation({ isTransforming = false, onGenerate }: Netwo
         </a>
         <div className="capture-name">
           <span className="status-dot" aria-hidden="true" />
-          MOCK CAPTURE / {mockCapture.name.toUpperCase()}
+          REAL CAPTURE / {capture.name.toUpperCase()}
         </div>
       </header>
 
@@ -83,11 +81,11 @@ export function NetworkObservation({ isTransforming = false, onGenerate }: Netwo
             <span className="hud-live">RECONSTRUCTED</span>
           </div>
           <dl>
-            <div><dt>PACKETS</dt><dd>{packetTotal.toLocaleString()}</dd></div>
-            <div><dt>ENDPOINTS</dt><dd>{mockCapture.endpoints.length}</dd></div>
-            <div><dt>CONNECTIONS</dt><dd>{mockCapture.connections.length}</dd></div>
-            <div><dt>ANOMALIES</dt><dd>{anomalyTotal}</dd></div>
-            <div><dt>DURATION</dt><dd>{formatDuration(mockCapture.duration)}</dd></div>
+            <div><dt>PACKETS</dt><dd>{capture.totalPackets.toLocaleString()}</dd></div>
+            <div><dt>ENDPOINTS</dt><dd>{capture.totalEndpoints}</dd></div>
+            <div><dt>CONNECTIONS</dt><dd>{capture.totalConnections}</dd></div>
+            <div><dt>ANOMALIES</dt><dd>{capture.totalAnomalies}</dd></div>
+            <div><dt>DURATION</dt><dd>{formatDuration(capture.duration)}</dd></div>
           </dl>
         </aside>
 
@@ -98,14 +96,14 @@ export function NetworkObservation({ isTransforming = false, onGenerate }: Netwo
             className="topology"
             viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
             role="img"
-            aria-label="Network topology with eight endpoints and animated communication paths"
+            aria-label={`Network topology with ${capture.endpoints.length} displayed endpoints and animated communication paths`}
           >
             <defs>
               <filter id="line-glow" x="-40%" y="-40%" width="180%" height="180%">
                 <feGaussianBlur stdDeviation="3" result="blur" />
                 <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
               </filter>
-              {mockCapture.connections.map((connection, index) => (
+              {capture.connections.map((connection, index) => (
                 <path
                   key={`motion-${connection.id}`}
                   id={`motion-${connection.id}`}
@@ -115,7 +113,7 @@ export function NetworkObservation({ isTransforming = false, onGenerate }: Netwo
             </defs>
 
             <g className="connection-layer">
-              {mockCapture.connections.map((connection, index) => {
+              {capture.connections.map((connection, index) => {
                 const path = connectionPath(connection, endpointsByIp, index)
                 const active = isRelated(connection)
                 const duration = 2.7 + (index % 5) * 0.72 + (connection.packets % 4) * 0.16
@@ -141,11 +139,11 @@ export function NetworkObservation({ isTransforming = false, onGenerate }: Netwo
             </g>
 
             <g className="node-layer">
-              {mockCapture.endpoints.map((endpoint, index) => {
+              {capture.endpoints.map((endpoint, index) => {
                 const position = point(endpoint)
                 const active = !selected || selected.id === endpoint.id
                 const related = selected
-                  ? mockCapture.connections.some(
+                  ? capture.connections.some(
                       (connection) =>
                         isRelated(connection) &&
                         (connection.source === endpoint.ip || connection.destination === endpoint.ip),
@@ -191,6 +189,11 @@ export function NetworkObservation({ isTransforming = false, onGenerate }: Netwo
             <span>{selected ? 'ENDPOINT SELECTED' : 'LIVE RELATIONSHIP MAP'}</span>
             <strong>{selected ? `${selected.name} / ${selected.ip}` : 'SELECT A NODE TO ISOLATE TRAFFIC'}</strong>
           </div>
+          {capture.omittedConnections > 0 && (
+            <div className="topology-limit-note">
+              SHOWING {capture.connections.length} HIGHEST-ACTIVITY RELATIONSHIPS / {capture.totalConnections} TOTAL
+            </div>
+          )}
         </div>
 
         <button className="generate-button" type="button" onClick={onGenerate} disabled={isTransforming}>
@@ -200,7 +203,7 @@ export function NetworkObservation({ isTransforming = false, onGenerate }: Netwo
           </svg>
         </button>
       </section>
-      {isTransforming && <TopologyToDnaTransition />}
+      {isTransforming && <TopologyToDnaTransition capture={capture} />}
     </main>
   )
 }

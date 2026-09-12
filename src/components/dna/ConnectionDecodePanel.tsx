@@ -73,6 +73,8 @@ export function ConnectionDecodePanel({ connection, endpoints, onClose }: Connec
   const destinationEndpoint = findEndpoint(connection.destination, endpoints)
   const sourceName = getKnownEndpointName(sourceEndpoint)
   const destinationName = getKnownEndpointName(destinationEndpoint)
+  const sourceLabel = connection.roleModel === 'client-server' ? 'CLIENT' : 'ENDPOINT A'
+  const destinationLabel = connection.roleModel === 'client-server' ? 'SERVER' : 'ENDPOINT B'
   const explanation = explainConnection(connection, endpoints)
   const filters = generateWiresharkFilters(connection)
 
@@ -110,13 +112,15 @@ export function ConnectionDecodePanel({ connection, endpoints, onClose }: Connec
             <button type="button" onClick={() => setDecoded(false)}>OVERVIEW</button>
           </div>
           <dl>
-            {sourceName && <div><dt>SOURCE ENDPOINT</dt><dd>{sourceName}</dd></div>}
-            <div><dt>SOURCE IP</dt><dd>{connection.source}</dd></div>
-            {destinationName && <div><dt>DESTINATION ENDPOINT</dt><dd>{destinationName}</dd></div>}
-            <div><dt>DESTINATION IP</dt><dd>{connection.destination}</dd></div>
-            <div><dt>PROTOCOL</dt><dd>{connection.protocol}</dd></div>
-            {connection.sourcePort !== undefined && <div><dt>SOURCE PORT</dt><dd>{connection.sourcePort}</dd></div>}
-            {connection.destinationPort !== undefined && <div><dt>DESTINATION PORT</dt><dd>{connection.destinationPort}</dd></div>}
+            {sourceName && <div><dt>{sourceLabel} NAME</dt><dd>{sourceName}</dd></div>}
+            <div><dt>{sourceLabel} IP</dt><dd>{connection.source}</dd></div>
+            {destinationName && <div><dt>{destinationLabel} NAME</dt><dd>{destinationName}</dd></div>}
+            <div><dt>{destinationLabel} IP</dt><dd>{connection.destination}</dd></div>
+            <div><dt>DISPLAY PROTOCOL</dt><dd>{connection.displayProtocol}</dd></div>
+            <div><dt>TRANSPORT</dt><dd>{connection.transportProtocol}</dd></div>
+            {connection.applicationProtocol && <div><dt>APPLICATION</dt><dd>{connection.applicationProtocol}</dd></div>}
+            {connection.sourcePort !== null && <div><dt>{sourceLabel} PORT</dt><dd>{connection.sourcePort}</dd></div>}
+            {connection.destinationPort !== null && <div><dt>{destinationLabel} PORT</dt><dd>{connection.destinationPort}</dd></div>}
             <div><dt>PACKETS</dt><dd>{connection.packets.toLocaleString()}</dd></div>
             <div><dt>DATA</dt><dd>{formatBytes(connection.bytes)}</dd></div>
             <div><dt>FIRST SEEN</dt><dd>{formatCaptureTime(connection.firstSeen)}</dd></div>
