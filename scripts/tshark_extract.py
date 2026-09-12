@@ -38,6 +38,57 @@ def find_tshark():
     )
 
 
+def find_capinfos():
+    capinfos = shutil.which("capinfos")
+
+    if capinfos:
+        return capinfos
+
+    windows_path = r"C:\Program Files\Wireshark\capinfos.exe"
+
+    if os.path.exists(windows_path):
+        return windows_path
+
+    raise RuntimeError(
+        "capinfos was not found. Install Wireshark or add capinfos to PATH."
+    )
+
+
+def get_capture_duration(capture_path):
+    capinfos = find_capinfos()
+
+    command = [
+        capinfos,
+        "-T",
+        "-r",
+        "-u",
+        capture_path,
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        error_message = result.stderr.strip()
+
+        if not error_message:
+            error_message = "Could not determine capture duration."
+
+        raise RuntimeError(error_message)
+
+    output = result.stdout.strip()
+
+    try:
+        return float(output.split("\t")[-1])
+    except (ValueError, IndexError):
+        raise RuntimeError(
+            f"Could not parse capture duration from capinfos output: {output}"
+        )
+
+
 def run_tshark(capture_path):
     tshark = find_tshark()
 
@@ -116,7 +167,11 @@ def normalize_application_protocol(protocol_name):
 def parse_packets(raw_output):
     packets = []
 
-    reader = csv.reader(raw_output.splitlines(), delimiter="\t", quotechar='"')
+    reader = csv.reader(
+        raw_output.splitlines(),
+        delimiter="\t",
+        quotechar='"',
+    )
 
     for row in reader:
         if len(row) < len(TSHARK_FIELDS):
@@ -214,7 +269,6 @@ def infer_roles(packets):
     destination_ip = first_packet["destination"]
     destination_port = first_packet["destinationPort"]
 
-    transport = first_packet["transportProtocol"]
     application = first_packet["applicationProtocol"]
 
     # Strong application-level evidence.
@@ -227,12 +281,6 @@ def infer_roles(packets):
             "serverPort": destination_port,
         }
 
-    # TCP SYN without ACK gives useful connection-establishment evidence.
-    # The current extraction does not include TCP flags, so this cannot
-    # currently be used.
-
-    # Use service-port evidence only when one side looks clearly like a
-    # service endpoint and the other side uses a high ephemeral port.
     common_service_ports = {
         53,
         80,
@@ -267,14 +315,17 @@ def infer_roles(packets):
             "serverPort": source_port,
         }
 
-    # If roles cannot be inferred confidently, use deterministic
-    # endpoint A/B ordering.
     endpoints = [
         (source_ip, source_port),
         (destination_ip, destination_port),
     ]
 
-    endpoints.sort(key=lambda item: endpoint_key(item[0], item[1]))
+    endpoints.sort(
+        key=lambda item: endpoint_key(
+            item[0],
+            item[1],
+        )
+    )
 
     return {
         "roleModel": "neutral",
@@ -328,7 +379,10 @@ def aggregate_connection(connection_id, packets):
         "applicationProtocol": application_protocol,
         "displayProtocol": display_protocol,
         "packetsTotal": len(packets),
-        "bytesTotal": sum(packet["length"] for packet in packets),
+        "bytesTotal": sum(
+            packet["length"]
+            for packet in packets
+        ),
         "firstSeen": packets[0]["timestamp"],
         "lastSeen": packets[-1]["timestamp"],
         "riskScore": 0,
@@ -365,11 +419,18 @@ def aggregate_connection(connection_id, packets):
                 packets_server_to_client += 1
                 bytes_server_to_client += packet["length"]
 
-        connection["packetsClientToServer"] = packets_client_to_server
-        connection["packetsServerToClient"] = packets_server_to_client
-
-        connection["bytesClientToServer"] = bytes_client_to_server
-        connection["bytesServerToClient"] = bytes_server_to_client
+        connection["packetsClientToServer"] = (
+            packets_client_to_server
+        )
+        connection["packetsServerToClient"] = (
+            packets_server_to_client
+        )
+        connection["bytesClientToServer"] = (
+            bytes_client_to_server
+        )
+        connection["bytesServerToClient"] = (
+            bytes_server_to_client
+        )
 
     else:
         endpoint_a_ip = role_info["endpointAIp"]
@@ -403,7 +464,6 @@ def aggregate_connection(connection_id, packets):
 
         connection["packetsAToB"] = packets_a_to_b
         connection["packetsBToA"] = packets_b_to_a
-
         connection["bytesAToB"] = bytes_a_to_b
         connection["bytesBToA"] = bytes_b_to_a
 
@@ -419,25 +479,30 @@ def aggregate_packets(packets):
 
     connections = []
 
-    sorted_keys = sorted(conversations.keys(), key=str)
+    sorted_keys = sorted(
+        conversations.keys(),
+        key=str,
+    )
 
-    for index, key in enumerate(sorted_keys, start=1):
+    for index, key in enumerate(
+        sorted_keys,
+        start=1,
+    ):
         connection = aggregate_connection(
             f"connection-{index}",
             conversations[key],
         )
+
         connections.append(connection)
 
     return connections
 
 
-def build_capture_output(capture_path, packets, connections):
-    if packets:
-        first_timestamp = min(packet["timestamp"] for packet in packets)
-        last_timestamp = max(packet["timestamp"] for packet in packets)
-        duration = last_timestamp - first_timestamp
-    else:
-        duration = 0.0
+def build_capture_output(
+    capture_path,
+    connections,
+):
+    duration = get_capture_duration(capture_path)
 
     return {
         "filename": os.path.basename(capture_path),
@@ -448,7 +513,9 @@ def build_capture_output(capture_path, packets, connections):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert a PCAP/PCAPNG file into Network DNA JSON."
+        description=(
+            "Convert a PCAP/PCAPNG file into Network DNA JSON."
+        )
     )
 
     parser.add_argument(
@@ -475,25 +542,36 @@ def main():
 
     try:
         raw_output = run_tshark(capture_path)
+
         packets = parse_packets(raw_output)
+
         connections = aggregate_packets(packets)
 
         output = build_capture_output(
             capture_path,
-            packets,
             connections,
         )
 
     except RuntimeError as error:
-        print(f"Error: {error}", file=sys.stderr)
+        print(
+            f"Error: {error}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    json_output = json.dumps(output, indent=2)
+    json_output = json.dumps(
+        output,
+        indent=2,
+    )
 
     if args.output:
         output_path = os.path.abspath(args.output)
 
-        with open(output_path, "w", encoding="utf-8") as file:
+        with open(
+            output_path,
+            "w",
+            encoding="utf-8",
+        ) as file:
             file.write(json_output)
 
         print(f"Saved JSON to: {output_path}")
