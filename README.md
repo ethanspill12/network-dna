@@ -18,10 +18,10 @@ python -m uvicorn backend.main:app --reload
 Frontend, in a second terminal:
 
 ```powershell
-npm install
-npm run dev
+npm ci
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
-Open `http://localhost:5173`. The frontend uses `http://127.0.0.1:8000` by default. Set `VITE_API_URL` before starting Vite to use a different local API address.
+Open `http://127.0.0.1:5173`. Port `5173` is required by the current local FastAPI CORS configuration. The frontend uses `http://127.0.0.1:8000` by default; set `VITE_API_URL` before starting Vite to use a different local API address.
 
 Only `.pcap` and `.pcapng` uploads are accepted. Files are written under the backend's ignored temporary-upload directory and removed after each request.
