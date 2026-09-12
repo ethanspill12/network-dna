@@ -77,6 +77,7 @@ export function ConnectionDecodePanel({ connection, endpoints, onClose }: Connec
   const destinationLabel = connection.roleModel === 'client-server' ? 'SERVER' : 'ENDPOINT B'
   const explanation = explainConnection(connection, endpoints)
   const filters = generateWiresharkFilters(connection)
+  const finding = connection.simulation
 
   const copyFilter = async (expression: string) => {
     const copied = await copyWithFallback(expression)
@@ -91,13 +92,27 @@ export function ConnectionDecodePanel({ connection, endpoints, onClose }: Connec
       </div>
 
       <div className="connection-overview">
-        <span className="decode-kicker">WHAT IS THIS?</span>
+        <span className="decode-kicker">{finding ? 'WHAT HAPPENED?' : 'WHAT IS THIS?'}</span>
         <h2>{explanation.title}</h2>
         <p>{explanation.summary}</p>
         {explanation.context && <p className="connection-context">{explanation.context}</p>}
+        {finding && (
+          <section className="finding-evidence" aria-labelledby="finding-heading">
+            <div className="finding-heading">
+              <span id="finding-heading">WHY THIS WAS FLAGGED</span>
+              <strong>{finding.score} / 100</strong>
+            </div>
+            <dl>
+              {finding.signals.map((signal) => (
+                <div key={signal.id}><dt>{signal.label}</dt><dd>{signal.value}</dd></div>
+              ))}
+            </dl>
+            <small>Educational heuristic score—not a threat probability or proof of compromise.</small>
+          </section>
+        )}
         <div className="overview-status">
           <span>STATUS</span>
-          <strong className="normal-status"><i />{connection.status.toUpperCase()}</strong>
+          <strong className={`connection-status connection-status--${connection.status}`}><i />{connection.status.toUpperCase()}</strong>
         </div>
       </div>
 
@@ -132,7 +147,9 @@ export function ConnectionDecodePanel({ connection, endpoints, onClose }: Connec
             <div className="decode-section-heading">
               <span id="wireshark-heading">FIND THIS IN WIRESHARK</span>
             </div>
-            <p className="wireshark-intro">Start broad, then narrow the display filter when you need more precision.</p>
+            <p className="wireshark-intro">{finding
+              ? 'These filters isolate the simulated relationship for investigation; matching traffic alone does not prove C2 activity.'
+              : 'Start broad, then narrow the display filter when you need more precision.'}</p>
             <ol className="filter-list">
               {filters.map((filter, index) => {
                 const state = copyState?.expression === filter.expression ? copyState.status : null

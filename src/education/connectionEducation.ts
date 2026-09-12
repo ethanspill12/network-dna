@@ -31,6 +31,13 @@ export function explainConnection(
   connection: NetworkConnection,
   endpoints: NetworkEndpoint[],
 ): ConnectionExplanation {
+  if (connection.simulation?.scenario === 'c2-beaconing') {
+    return {
+      title: 'POTENTIAL C2 BEACONING',
+      summary: 'This device repeatedly contacted the same external endpoint at unusually regular intervals. Automated software can create patterns like this, including malware communicating with command-and-control infrastructure.',
+      context: 'This does not prove the device is infected, but the relationship deserves investigation.',
+    }
+  }
   const source = findEndpoint(connection.source, endpoints)
   const destination = findEndpoint(connection.destination, endpoints)
   const actor = connection.roleModel === 'client-server'

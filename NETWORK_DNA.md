@@ -793,7 +793,7 @@ When a checkpoint is completed, update a concise project-status section so futur
 # 30. Project Status
 
 ## Current Phase
-**Checkpoint 5 Complete — Real PCAP/PCAPNG Integration**
+**Checkpoint 6A Complete — Attack Lab / Potential C2 Beaconing + DNA Mutation**
 
 ## Completed
 - Project concept
@@ -840,12 +840,23 @@ When a checkpoint is completed, update a concise project-status section so futur
 - Indeterminate staged capture-processing experience and readable error states implemented
 - Deterministic 48-relationship activity limit applied with full capture totals retained in the HUD
 - Real generated PCAPNG API flow, production build, and local frontend/backend runtimes verified
+- Distinct educational Attack Lab mode and three-scenario selector implemented
+- Potential C2 Beaconing is available; Port Scan and Data Exfiltration remain explicitly unavailable
+- Safe deterministic simulated capture is isolated from real uploaded capture data
+- Explainable beacon heuristic scores interval regularity, repetition, endpoint attribution, and service-port context
+- Simulated relationship progresses from baseline through deviation and amber to high-priority red mutation
+- Mutation color, local glow, and packet activity affect only the flagged DNA relationship
+- Restrained `DNA MUTATION DETECTED` HUD state implemented
+- Beginner-safe Potential C2 explanation and `WHY THIS WAS FLAGGED` evidence integrated into Decode Mode
+- Existing role-aware Wireshark filters reused with explicit non-proof investigation language
+- Real PCAP flow, normal DNA behavior, interaction, navigation, and Decode Mode preserved
+- Deterministic heuristic checks, production build, and local runtime verified
 
 ## In Progress
 - Awaiting explicit approval for the next checkpoint
 
 ## Next Checkpoint
-Define the next checkpoint before adding additional product areas.
+Define the next checkpoint before adding additional scenarios or product areas.
 
 Do **NOT** begin Attack Lab, anomaly/mutation work, timeline, or live capture until explicitly approved.
 

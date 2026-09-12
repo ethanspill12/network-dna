@@ -6,11 +6,12 @@ import {
   Group,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   Quaternion,
   Vector3,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import type { NetworkConnection } from '../../types/network'
+import type { MutationStage, NetworkConnection } from '../../types/network'
 import { getDnaRungLayout, getHelixCoordinate } from '../../visualization/dnaGeometry'
 
 function toVector3(point: { x: number; y: number; z: number }) {
@@ -77,6 +78,7 @@ interface RungProps {
   count: number
   hovered: boolean
   selected: boolean
+  mutationStage?: MutationStage
   onHover: (connectionId: string | null) => void
   onSelect: (connectionId: string) => void
 }
@@ -88,6 +90,7 @@ function ConnectionRung({
   count,
   hovered,
   selected,
+  mutationStage,
   onHover,
   onSelect,
 }: RungProps) {
@@ -102,13 +105,47 @@ function ConnectionRung({
   )
   const pulse = useRef<Mesh>(null)
   const pulseMaterial = useRef<MeshBasicMaterial>(null)
+  const rungMaterial = useRef<MeshStandardMaterial>(null)
+  const startMaterial = useRef<MeshStandardMaterial>(null)
+  const endMaterial = useRef<MeshStandardMaterial>(null)
   const pulseProgress = useRef((index * 0.173) % 1)
   const activity = Math.min(connection.packets / 850, 1)
   const highlighted = hovered || selected
+  const mutationActive = mutationStage && mutationStage !== 'baseline'
+  const mutationColor = mutationStage === 'detected' ? '#ff545c' : mutationStage === 'warning' ? '#efb456' : '#e9fbfd'
+  const mutationEmissive = mutationStage === 'detected' ? '#d51f2a' : mutationStage === 'warning' ? '#c47620' : '#52bcc9'
+  const targetColor = useMemo(
+    () => new Color(mutationActive ? mutationColor : highlighted ? '#e8fdff' : '#72dce9'),
+    [highlighted, mutationActive, mutationColor],
+  )
+  const targetEmissive = useMemo(
+    () => new Color(mutationActive ? mutationEmissive : highlighted ? '#86effa' : '#1e8d9d'),
+    [highlighted, mutationActive, mutationEmissive],
+  )
+  const endpointTargetColor = useMemo(
+    () => new Color(mutationActive ? mutationColor : '#dffcff'),
+    [mutationActive, mutationColor],
+  )
+  const endpointTargetEmissive = useMemo(
+    () => new Color(mutationActive ? mutationEmissive : '#56ddeb'),
+    [mutationActive, mutationEmissive],
+  )
 
   useFrame((_, delta) => {
     if (isHandoff) return
-    pulseProgress.current = (pulseProgress.current + delta * (0.16 + activity * 0.24)) % 1
+    const colorSmoothing = 1 - Math.exp(-delta * 3.8)
+    rungMaterial.current?.color.lerp(targetColor, colorSmoothing)
+    rungMaterial.current?.emissive.lerp(targetEmissive, colorSmoothing)
+    for (const material of [startMaterial.current, endMaterial.current]) {
+      material?.color.lerp(endpointTargetColor, colorSmoothing)
+      material?.emissive.lerp(endpointTargetEmissive, colorSmoothing)
+    }
+    if (rungMaterial.current) {
+      const targetIntensity = mutationStage === 'detected' ? 2.2 : mutationActive ? 1.45 : highlighted ? 1.5 : 0.55
+      rungMaterial.current.emissiveIntensity += (targetIntensity - rungMaterial.current.emissiveIntensity) * colorSmoothing
+    }
+    if (pulseMaterial.current) pulseMaterial.current.color.lerp(targetColor, colorSmoothing)
+    pulseProgress.current = (pulseProgress.current + delta * (0.16 + activity * 0.24 + (mutationActive ? 0.18 : 0))) % 1
     const travel = pulseProgress.current
     pulse.current?.position.lerpVectors(start, end, travel)
     if (pulseMaterial.current) {
@@ -125,9 +162,10 @@ function ConnectionRung({
       >
         <cylinderGeometry args={[highlighted ? 0.055 : 0.035, highlighted ? 0.055 : 0.035, length, 10]} />
         <meshStandardMaterial
-          color={highlighted ? '#e8fdff' : '#72dce9'}
-          emissive={highlighted ? '#86effa' : '#1e8d9d'}
-          emissiveIntensity={highlighted ? 1.5 : 0.55}
+          ref={rungMaterial}
+          color="#72dce9"
+          emissive="#1e8d9d"
+          emissiveIntensity={0.55}
           metalness={0.45}
           roughness={0.28}
         />
@@ -154,11 +192,11 @@ function ConnectionRung({
 
       <mesh position={start}>
         <sphereGeometry args={[highlighted ? 0.105 : 0.075, 12, 12]} />
-        <meshStandardMaterial color="#dffcff" emissive="#56ddeb" emissiveIntensity={highlighted ? 1.8 : 0.8} />
+        <meshStandardMaterial ref={startMaterial} color="#dffcff" emissive="#56ddeb" emissiveIntensity={0.8} />
       </mesh>
       <mesh position={end}>
         <sphereGeometry args={[highlighted ? 0.105 : 0.075, 12, 12]} />
-        <meshStandardMaterial color="#dffcff" emissive="#56ddeb" emissiveIntensity={highlighted ? 1.8 : 0.8} />
+        <meshStandardMaterial ref={endMaterial} color="#dffcff" emissive="#56ddeb" emissiveIntensity={0.8} />
       </mesh>
 
       <mesh ref={pulse} position={start}>
@@ -171,6 +209,14 @@ function ConnectionRung({
           toneMapped={false}
         />
       </mesh>
+      {mutationActive && (
+        <pointLight
+          position={midpoint}
+          color={mutationColor}
+          intensity={mutationStage === 'detected' ? 7 : 3.5}
+          distance={2.2}
+        />
+      )}
     </group>
   )
 }
@@ -178,13 +224,14 @@ function ConnectionRung({
 interface HelixProps {
   isHandoff: boolean
   connections: NetworkConnection[]
+  mutation?: { connectionId: string; stage: MutationStage }
   hoveredId: string | null
   selectedId: string | null
   onHover: (connectionId: string | null) => void
   onSelect: (connectionId: string) => void
 }
 
-function DataHelix({ isHandoff, connections, hoveredId, selectedId, onHover, onSelect }: HelixProps) {
+function DataHelix({ isHandoff, connections, mutation, hoveredId, selectedId, onHover, onSelect }: HelixProps) {
   const helix = useRef<Group>(null)
   const railCurves = useMemo(() => {
     const segments = 90
@@ -230,6 +277,7 @@ function DataHelix({ isHandoff, connections, hoveredId, selectedId, onHover, onS
           count={connections.length}
           hovered={hoveredId === connection.id}
           selected={selectedId === connection.id}
+          mutationStage={mutation?.connectionId === connection.id ? mutation.stage : undefined}
           onHover={onHover}
           onSelect={onSelect}
         />
@@ -241,6 +289,7 @@ function DataHelix({ isHandoff, connections, hoveredId, selectedId, onHover, onS
 interface DnaSceneProps {
   isHandoff?: boolean
   connections: NetworkConnection[]
+  mutation?: { connectionId: string; stage: MutationStage }
   hoveredId: string | null
   selectedId: string | null
   onHover: (connectionId: string | null) => void
@@ -267,6 +316,7 @@ export function DnaScene(props: DnaSceneProps) {
       <DataHelix
         isHandoff={isHandoff}
         connections={props.connections}
+        mutation={props.mutation}
         hoveredId={props.hoveredId}
         selectedId={props.selectedId}
         onHover={props.onHover}

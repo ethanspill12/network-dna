@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { uploadCapture } from './api/captureApi'
 import { NetworkObservation } from './components/NetworkObservation'
+import { AttackLab } from './components/attackLab/AttackLab'
+import { C2_CONNECTION_ID, c2AttackLabCapture } from './data/attackLabCapture'
 import { adaptCapture } from './data/captureAdapter'
 import type { NetworkCapture } from './types/network'
 
@@ -10,7 +12,7 @@ const NetworkDnaView = lazy(() =>
 )
 
 function App() {
-  const [view, setView] = useState<'landing' | 'processing' | 'observation' | 'dna-transitioning' | 'dna'>('landing')
+  const [view, setView] = useState<'landing' | 'processing' | 'observation' | 'dna-transitioning' | 'dna' | 'attack-lab' | 'attack-dna'>('landing')
   const [capture, setCapture] = useState<NetworkCapture | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [processingStage, setProcessingStage] = useState(0)
@@ -53,6 +55,30 @@ function App() {
     if (view !== 'observation') return
     setView('dna-transitioning')
     window.setTimeout(() => setView('dna'), 2350)
+  }
+
+  if (view === 'attack-lab') {
+    return (
+      <AttackLab
+        onExit={() => setView('landing')}
+        onStartC2={() => {
+          void loadNetworkDnaView()
+          setView('attack-dna')
+        }}
+      />
+    )
+  }
+
+  if (view === 'attack-dna') {
+    return (
+      <Suspense fallback={<main className="dna-view" aria-label="Loading Attack Lab simulation" />}>
+        <NetworkDnaView
+          capture={c2AttackLabCapture}
+          attackLab={{ targetConnectionId: C2_CONNECTION_ID }}
+          onBack={() => setView('attack-lab')}
+        />
+      </Suspense>
+    )
   }
 
   if (view === 'observation' && capture) {
@@ -123,6 +149,9 @@ function App() {
           <svg viewBox="0 0 20 20" aria-hidden="true">
             <path d="M10 3v10m0 0 4-4m-4 4-4-4M4 16h12" />
           </svg>
+        </button>
+        <button className="attack-lab-entry" type="button" onClick={() => setView('attack-lab')} disabled={view === 'processing'}>
+          <span>ATTACK LAB</span><small>SAFE SIMULATION</small>
         </button>
         {error && <div className="capture-error" role="alert"><span>CAPTURE ERROR</span>{error}</div>}
         {view === 'processing' && (

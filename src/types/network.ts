@@ -1,6 +1,22 @@
 export type EndpointRole = 'local' | 'infrastructure' | 'service' | 'external'
 export type TransportProtocol = 'TCP' | 'UDP'
 export type ConnectionStatus = 'normal' | 'low-concern' | 'suspicious' | 'high-risk'
+export type MutationStage = 'baseline' | 'deviation' | 'warning' | 'detected'
+
+export interface BeaconSignal {
+  id: 'interval-regularity' | 'repeated-outbound' | 'unknown-external' | 'unusual-service'
+  label: string
+  value: string
+  points: number
+}
+
+export interface SimulationFinding {
+  scenario: 'c2-beaconing'
+  eventTimes: number[]
+  score: number
+  status: ConnectionStatus
+  signals: BeaconSignal[]
+}
 
 interface ContractConnectionBase {
   id: string
@@ -73,6 +89,7 @@ export interface NetworkConnection {
   riskScore: number
   status: ConnectionStatus
   contract: ContractConnection
+  simulation?: SimulationFinding
 }
 
 export interface NetworkCapture {
