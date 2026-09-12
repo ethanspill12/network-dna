@@ -89,3 +89,74 @@ Meaning:total length of captured network frame in bytes.
 Why Network DNA needs it:can use packet size to see how much data is being transferred.
 
 Useful Wireshark filter: frame.len > 1000
+
+
+
+
+# R2 - TShark PCAP Extraction
+
+## Test Capture
+
+A small PCAPNG capture was created using normal browsing traffic and ping traffic.
+
+Capture file:
+
+`samples/pcaps/test.pcapng`
+
+## Working TShark Command
+
+```powershell
+& "C:\Program Files\Wireshark\tshark.exe" -r ".\samples\pcaps\test.pcapng" -T fields -e frame.time_relative -e ip.src -e ip.dst -e ip.proto -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e frame.len
+```
+
+## Command Options
+
+### `-r`
+
+Reads packets from an existing PCAP or PCAPNG capture file.
+
+### `-T fields`
+
+Tells TShark to output only selected packet fields instead of the normal packet summary.
+
+### `-e`
+
+Selects an individual Wireshark field to include in the output.
+
+For example:
+
+```text
+-e ip.src
+```
+
+outputs the source IPv4 address.
+
+## Extracted Fields
+
+The command extracts:
+
+* `frame.time_relative` — relative packet timestamp
+* `ip.src` — source IPv4 address
+* `ip.dst` — destination IPv4 address
+* `ip.proto` — IP protocol number
+* `tcp.srcport` — TCP source port
+* `tcp.dstport` — TCP destination port
+* `udp.srcport` — UDP source port
+* `udp.dstport` — UDP destination port
+* `frame.len` — frame length in bytes
+
+## Test Result
+
+The extraction worked successfully on the test capture.
+
+Example TCP packet output showed:
+
+```text
+19.813837200    10.13.241.19    162.159.133.234    6    55310    443    54
+```
+
+Here, protocol number `6` represents TCP. The TCP source and destination ports are populated while the UDP port fields are blank.
+
+Example UDP packet output showed protocol number `17`, with the UDP source and destination port fields populated while the TCP port fields were blank.
+
+This means the future parser will need to handle missing TCP or UDP fields depending on which transport protocol a packet uses.
