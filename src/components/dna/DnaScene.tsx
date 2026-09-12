@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import {
   CatmullRomCurve3,
   Color,
+  Group,
   Mesh,
   MeshBasicMaterial,
   Quaternion,
@@ -11,24 +12,28 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { mockCapture } from '../../data/mockCapture'
 import type { NetworkConnection } from '../../types/network'
+import { getDnaRungLayout, getHelixCoordinate } from '../../visualization/dnaGeometry'
 
-const HELIX_RADIUS = 1.42
-const HELIX_HEIGHT = 7.2
-const HELIX_TURNS = 2.15
-
-function helixPoint(progress: number, side: 0 | 1) {
-  const angle = progress * Math.PI * 2 * HELIX_TURNS + side * Math.PI
-  return new Vector3(
-    Math.cos(angle) * HELIX_RADIUS,
-    (progress - 0.5) * HELIX_HEIGHT,
-    Math.sin(angle) * HELIX_RADIUS,
-  )
+function toVector3(point: { x: number; y: number; z: number }) {
+  return new Vector3(point.x, point.y, point.z)
 }
 
-function DampedControls() {
+function DampedControls({ isHandoff }: { isHandoff: boolean }) {
   const { camera, gl } = useThree()
   const controls = useMemo(() => new OrbitControls(camera, gl.domElement), [camera, gl])
   const resumeTimer = useRef<number | undefined>(undefined)
+  const handoffRef = useRef(isHandoff)
+
+  useEffect(() => {
+    handoffRef.current = isHandoff
+    window.clearTimeout(resumeTimer.current)
+    controls.autoRotate = false
+    if (!isHandoff) {
+      resumeTimer.current = window.setTimeout(() => {
+        controls.autoRotate = true
+      }, 700)
+    }
+  }, [controls, isHandoff])
 
   useEffect(() => {
     controls.enableDamping = true
@@ -36,16 +41,16 @@ function DampedControls() {
     controls.enablePan = false
     controls.minDistance = 6.2
     controls.maxDistance = 14
-    controls.autoRotate = true
+    controls.autoRotate = false
     controls.autoRotateSpeed = 0.58
     controls.target.set(0, 0, 0)
-
     const pauseRotation = () => {
       window.clearTimeout(resumeTimer.current)
       controls.autoRotate = false
     }
     const scheduleRotation = () => {
       window.clearTimeout(resumeTimer.current)
+      if (handoffRef.current) return
       resumeTimer.current = window.setTimeout(() => {
         controls.autoRotate = true
       }, 2400)
@@ -67,6 +72,7 @@ function DampedControls() {
 }
 
 interface RungProps {
+  isHandoff: boolean
   connection: NetworkConnection
   index: number
   count: number
@@ -77,6 +83,7 @@ interface RungProps {
 }
 
 function ConnectionRung({
+  isHandoff,
   connection,
   index,
   count,
@@ -85,9 +92,9 @@ function ConnectionRung({
   onHover,
   onSelect,
 }: RungProps) {
-  const progress = (index + 0.5) / count
-  const start = useMemo(() => helixPoint(progress, 0), [progress])
-  const end = useMemo(() => helixPoint(progress, 1), [progress])
+  const layout = useMemo(() => getDnaRungLayout(index, count), [index, count])
+  const start = useMemo(() => toVector3(layout.start), [layout])
+  const end = useMemo(() => toVector3(layout.end), [layout])
   const midpoint = useMemo(() => start.clone().add(end).multiplyScalar(0.5), [start, end])
   const length = start.distanceTo(end)
   const orientation = useMemo(
@@ -101,6 +108,7 @@ function ConnectionRung({
   const highlighted = hovered || selected
 
   useFrame((_, delta) => {
+    if (isHandoff) return
     pulseProgress.current = (pulseProgress.current + delta * (0.16 + activity * 0.24)) % 1
     const travel = pulseProgress.current
     pulse.current?.position.lerpVectors(start, end, travel)
@@ -115,6 +123,19 @@ function ConnectionRung({
         position={midpoint}
         quaternion={orientation}
         scale={highlighted ? 1.08 : 1}
+      >
+        <cylinderGeometry args={[highlighted ? 0.055 : 0.035, highlighted ? 0.055 : 0.035, length, 10]} />
+        <meshStandardMaterial
+          color={highlighted ? '#e8fdff' : '#72dce9'}
+          emissive={highlighted ? '#86effa' : '#1e8d9d'}
+          emissiveIntensity={highlighted ? 1.5 : 0.55}
+          metalness={0.45}
+          roughness={0.28}
+        />
+      </mesh>
+      <mesh
+        position={midpoint}
+        quaternion={orientation}
         onPointerEnter={(event) => {
           event.stopPropagation()
           onHover(connection.id)
@@ -128,14 +149,8 @@ function ConnectionRung({
           onSelect(connection.id)
         }}
       >
-        <cylinderGeometry args={[highlighted ? 0.055 : 0.035, highlighted ? 0.055 : 0.035, length, 10]} />
-        <meshStandardMaterial
-          color={highlighted ? '#e8fdff' : '#72dce9'}
-          emissive={highlighted ? '#86effa' : '#1e8d9d'}
-          emissiveIntensity={highlighted ? 1.5 : 0.55}
-          metalness={0.45}
-          roughness={0.28}
-        />
+        <cylinderGeometry args={[0.13, 0.13, length, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
       <mesh position={start}>
@@ -162,24 +177,37 @@ function ConnectionRung({
 }
 
 interface HelixProps {
+  isHandoff: boolean
   hoveredId: string | null
   selectedId: string | null
   onHover: (connectionId: string | null) => void
   onSelect: (connectionId: string) => void
 }
 
-function DataHelix({ hoveredId, selectedId, onHover, onSelect }: HelixProps) {
+function DataHelix({ isHandoff, hoveredId, selectedId, onHover, onSelect }: HelixProps) {
+  const helix = useRef<Group>(null)
   const railCurves = useMemo(() => {
     const segments = 90
     return ([0, 1] as const).map(
       (side) => new CatmullRomCurve3(
-        Array.from({ length: segments }, (_, index) => helixPoint(index / (segments - 1), side)),
+        Array.from(
+          { length: segments },
+          (_, index) => toVector3(getHelixCoordinate(index / (segments - 1), side)),
+        ),
       ),
     )
   }, [])
 
+  useFrame((_, delta) => {
+    if (!helix.current) return
+    const smoothing = Math.min(1, delta * 2.4)
+    const target = isHandoff ? 0 : 0.08
+    helix.current.rotation.x += (target - helix.current.rotation.x) * smoothing
+    helix.current.rotation.z += (-target - helix.current.rotation.z) * smoothing
+  })
+
   return (
-    <group rotation={[0.08, 0, -0.08]}>
+    <group ref={helix} rotation={[0, 0, 0]}>
       {railCurves.map((curve, index) => (
         <mesh key={index}>
           <tubeGeometry args={[curve, 150, 0.055, 10, false]} />
@@ -196,6 +224,7 @@ function DataHelix({ hoveredId, selectedId, onHover, onSelect }: HelixProps) {
       {mockCapture.connections.map((connection, index) => (
         <ConnectionRung
           key={connection.id}
+          isHandoff={isHandoff}
           connection={connection}
           index={index}
           count={mockCapture.connections.length}
@@ -210,6 +239,7 @@ function DataHelix({ hoveredId, selectedId, onHover, onSelect }: HelixProps) {
 }
 
 interface DnaSceneProps {
+  isHandoff?: boolean
   hoveredId: string | null
   selectedId: string | null
   onHover: (connectionId: string | null) => void
@@ -218,6 +248,8 @@ interface DnaSceneProps {
 }
 
 export function DnaScene(props: DnaSceneProps) {
+  const isHandoff = props.isHandoff ?? false
+
   return (
     <Canvas
       className="dna-canvas"
@@ -232,12 +264,13 @@ export function DnaScene(props: DnaSceneProps) {
       <directionalLight position={[4, 7, 6]} intensity={1.25} color="#c8faff" />
       <pointLight position={[-4, -2, 3]} intensity={18} distance={10} color="#20bfd3" />
       <DataHelix
+        isHandoff={isHandoff}
         hoveredId={props.hoveredId}
         selectedId={props.selectedId}
         onHover={props.onHover}
         onSelect={props.onSelect}
       />
-      <DampedControls />
+      <DampedControls isHandoff={isHandoff} />
     </Canvas>
   )
 }

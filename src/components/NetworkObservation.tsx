@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { mockCapture } from '../data/mockCapture'
 import type { NetworkConnection, NetworkEndpoint } from '../types/network'
+import { TopologyToDnaTransition } from './transitions/TopologyToDnaTransition'
 
 const VIEW_WIDTH = 1000
 const VIEW_HEIGHT = 600
@@ -34,12 +35,13 @@ function formatDuration(seconds: number) {
 }
 
 interface NetworkObservationProps {
-  isExiting?: boolean
+  isTransforming?: boolean
   onGenerate: () => void
 }
 
-export function NetworkObservation({ isExiting = false, onGenerate }: NetworkObservationProps) {
+export function NetworkObservation({ isTransforming = false, onGenerate }: NetworkObservationProps) {
   const [selectedEndpoint, setSelectedEndpoint] = useState<string | null>(null)
+  const topologyRef = useRef<SVGSVGElement>(null)
   const endpointsByIp = useMemo(
     () => new Map(mockCapture.endpoints.map((endpoint) => [endpoint.ip, endpoint])),
     [],
@@ -51,8 +53,12 @@ export function NetworkObservation({ isExiting = false, onGenerate }: NetworkObs
   const isRelated = (connection: NetworkConnection) =>
     !selected || connection.source === selected.ip || connection.destination === selected.ip
 
+  useEffect(() => {
+    if (isTransforming) topologyRef.current?.pauseAnimations()
+  }, [isTransforming])
+
   return (
-    <main className={`observation ${isExiting ? 'observation--exiting' : ''}`}>
+    <main className={`observation ${isTransforming ? 'observation--transforming' : ''}`}>
       <header className="site-header observation-header">
         <a className="brand" href="/" aria-label="Return to Network DNA home">
           <span className="brand-mark" aria-hidden="true" />
@@ -88,6 +94,7 @@ export function NetworkObservation({ isExiting = false, onGenerate }: NetworkObs
         <div className="topology-shell">
           <div className="topology-grid" aria-hidden="true" />
           <svg
+            ref={topologyRef}
             className="topology"
             viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
             role="img"
@@ -186,13 +193,14 @@ export function NetworkObservation({ isExiting = false, onGenerate }: NetworkObs
           </div>
         </div>
 
-        <button className="generate-button" type="button" onClick={onGenerate}>
+        <button className="generate-button" type="button" onClick={onGenerate} disabled={isTransforming}>
           <span>GENERATE NETWORK DNA</span>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 4c8 0 6 16 14 16M19 4C11 4 13 20 5 20M8 8h8M8 16h8" />
           </svg>
         </button>
       </section>
+      {isTransforming && <TopologyToDnaTransition />}
     </main>
   )
 }

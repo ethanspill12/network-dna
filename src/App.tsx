@@ -1,8 +1,9 @@
 import { lazy, Suspense, useState } from 'react'
 import { NetworkObservation } from './components/NetworkObservation'
 
+const loadNetworkDnaView = () => import('./components/dna/NetworkDnaView')
 const NetworkDnaView = lazy(() =>
-  import('./components/dna/NetworkDnaView').then((module) => ({ default: module.NetworkDnaView })),
+  loadNetworkDnaView().then((module) => ({ default: module.NetworkDnaView })),
 )
 
 function App() {
@@ -11,24 +12,35 @@ function App() {
   const loadCapture = () => {
     if (view !== 'landing') return
     setView('transitioning')
-    window.setTimeout(() => setView('observation'), 620)
+    window.setTimeout(() => {
+      void loadNetworkDnaView()
+      setView('observation')
+    }, 620)
   }
 
   const generateDna = () => {
     if (view !== 'observation') return
     setView('dna-transitioning')
-    window.setTimeout(() => setView('dna'), 520)
+    window.setTimeout(() => setView('dna'), 2350)
   }
 
-  if (view === 'observation' || view === 'dna-transitioning') {
-    return <NetworkObservation onGenerate={generateDna} isExiting={view === 'dna-transitioning'} />
+  if (view === 'observation') {
+    return <NetworkObservation onGenerate={generateDna} />
   }
 
-  if (view === 'dna') {
+  if (view === 'dna-transitioning' || view === 'dna') {
+    const isHandoff = view === 'dna-transitioning'
     return (
-      <Suspense fallback={<main className="dna-view" aria-label="Loading Network DNA" />}>
-        <NetworkDnaView onBack={() => setView('observation')} />
-      </Suspense>
+      <div className={`dna-experience ${isHandoff ? 'dna-experience--handoff' : ''}`}>
+        <Suspense fallback={<main className="dna-view dna-view--seamless" aria-label="Loading Network DNA" />}>
+          <NetworkDnaView
+            isHandoff={isHandoff}
+            seamlessEntry
+            onBack={() => setView('observation')}
+          />
+        </Suspense>
+        {isHandoff && <NetworkObservation onGenerate={generateDna} isTransforming />}
+      </div>
     )
   }
 

@@ -3,6 +3,8 @@ import { mockCapture } from '../../data/mockCapture'
 import { DnaScene } from './DnaScene'
 
 interface NetworkDnaViewProps {
+  isHandoff?: boolean
+  seamlessEntry?: boolean
   onBack: () => void
 }
 
@@ -11,7 +13,7 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`
 }
 
-export function NetworkDnaView({ onBack }: NetworkDnaViewProps) {
+export function NetworkDnaView({ isHandoff = false, seamlessEntry = false, onBack }: NetworkDnaViewProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = mockCapture.connections.find((connection) => connection.id === selectedId)
@@ -22,7 +24,7 @@ export function NetworkDnaView({ onBack }: NetworkDnaViewProps) {
   }, [hoveredId])
 
   return (
-    <main className="dna-view">
+    <main className={`dna-view ${seamlessEntry ? 'dna-view--seamless' : ''} ${isHandoff ? 'dna-view--handoff' : ''}`}>
       <header className="site-header dna-header">
         <button className="back-button" type="button" onClick={onBack}>
           <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4-6 6 6 6M7 10h9" /></svg>
@@ -43,6 +45,7 @@ export function NetworkDnaView({ onBack }: NetworkDnaViewProps) {
 
         <div className="dna-viewport">
           <DnaScene
+            isHandoff={isHandoff}
             hoveredId={hoveredId}
             selectedId={selectedId}
             onHover={setHoveredId}

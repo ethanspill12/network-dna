@@ -793,7 +793,7 @@ When a checkpoint is completed, update a concise project-status section so futur
 # 30. Project Status
 
 ## Current Phase
-**Checkpoint 3A Complete — 3D Network DNA Prototype**
+**Checkpoint 3B Complete — Network Topology to DNA Transformation**
 
 ## Completed
 - Project concept
@@ -819,14 +819,19 @@ When a checkpoint is completed, update a concise project-status section so futur
 - Drag, touch, zoom, idle rotation, rung hover, and rung selection controls
 - Lightweight selected-connection HUD and in-app return to observation
 - Browser-level WebGL and interaction flow verified
+- Cinematic topology-to-DNA transformation implemented
+- Topology activity pauses and compresses before relationship reorganization
+- All 11 identified topology relationships align into projected DNA rungs
+- Shared geometry mapping preserves connection identity across SVG and WebGL
+- DNA emergence and idle-rotation settling sequence implemented
 
 ## In Progress
-- Awaiting explicit approval to begin Checkpoint 3B
+- Awaiting explicit approval for the next checkpoint
 
 ## Next Checkpoint
-Checkpoint 3B: topology-to-DNA transformation work only after explicit approval.
+Define the next checkpoint before adding Decode Mode, network integrations, or additional product areas.
 
-Do **NOT** begin topology-to-DNA morph or transformation work until Checkpoint 3B is explicitly approved.
+Do **NOT** begin Decode Mode, Wireshark/TShark integration, Attack Lab, or real PCAP work until explicitly approved.
 
 ---
 
