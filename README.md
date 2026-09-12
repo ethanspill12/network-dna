@@ -2,9 +2,11 @@
 
 **Your network has a fingerprint.**
 
-<!-- Add Network DNA hero/demo media here -->
-
 Network DNA transforms Wireshark/TShark packet captures into an interactive visual representation of network communication—not another endless feed of packets and logs. Load a real `.pcap` or `.pcapng`, observe its communication structure, reorganize those relationships into a 3D double helix, and learn how to investigate an individual connection in Wireshark.
+
+![Network DNA transforming real network traffic into an interactive DNA visualization](docs/media/network-dna-demo.gif)
+
+*Real PCAP traffic reconstructed as a network topology and transformed into Network DNA.*
 
 ## Beyond the Feed
 
@@ -44,6 +46,10 @@ Wireshark investigation
 
 For large captures, the interface visualizes the 48 highest-activity relationships while retaining full capture totals in the HUD.
 
+![Network DNA real packet capture reconstruction](docs/media/real-capture.png)
+
+*An actual packet capture processed through TShark and reconstructed into bidirectional communication relationships.*
+
 ## Visual language
 
 | Visual element | Meaning |
@@ -71,6 +77,10 @@ TECHNICAL DETAILS
 FIND THIS IN WIRESHARK
 ```
 
+![Network DNA Decode Mode and Wireshark investigation](docs/media/decode-mode.png)
+
+*Decode Mode progresses from a beginner-friendly explanation to technical connection details and generated Wireshark investigation filters.*
+
 Decode Mode uses the parsed client/server or neutral endpoint model, protocol information, ports when available, packet and byte totals, timing, and status. It then creates valid Wireshark display filters with short explanations of what each filter selects.
 
 Network DNA is designed to complement Wireshark, not replace it. Its purpose is to make communication patterns understandable and help users know what to investigate next.
@@ -78,6 +88,10 @@ Network DNA is designed to complement Wireshark, not replace it. Its purpose is 
 ## Attack Lab: Potential C2 Beaconing
 
 Attack Lab is a clearly labeled, safe educational simulation. Its implemented scenario shows one internal endpoint repeatedly contacting the same unknown external endpoint at approximately regular intervals.
+
+![Network DNA Attack Lab showing a simulated C2 beaconing mutation](docs/media/attack-lab.png)
+
+*Simulated educational C2-style beaconing creates a red mutation representing behavior deserving investigation—not confirmed malware.*
 
 The deterministic heuristic evaluates:
 
