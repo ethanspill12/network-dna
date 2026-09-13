@@ -184,7 +184,15 @@ Open `http://127.0.0.1:5173`.
 
 Port `5173` is required by the current local FastAPI CORS configuration. The frontend expects the API at `http://127.0.0.1:8000` by default. A different API address can be supplied with `VITE_API_URL` before starting Vite, but the backend CORS configuration must allow the frontend origin.
 
-Use a known, non-sensitive `.pcap` or `.pcapng` for testing. Capture files are intentionally ignored by Git and should not be committed.
+## Quick Demo
+
+You can load your own known, non-sensitive `.pcap` or `.pcapng` capture. If you do not have one, use the included demo capture:
+
+```text
+samples/demo/network-dna-demo.pcapng
+```
+
+The demo capture is fully synthetic and contains no real browsing activity or private network data. Other capture files remain intentionally ignored by Git and should not be committed.
 
 ## Demo paths
 
